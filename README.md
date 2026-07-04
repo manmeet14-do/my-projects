@@ -64,18 +64,26 @@ employee-portal/
 
 ## app.py
 
-```python
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
 
+employees = [
+    {"id": 1, "name": "Manmeet Kaur", "department": "DevOps"},
+    {"id": 2, "name": "John Doe", "department": "Development"},
+    {"id": 3, "name": "Jane Smith", "department": "Testing"}
+]
+
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('index.html', employees=employees)
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "UP"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-```
 
 ---
 
@@ -123,26 +131,25 @@ docker images
 
 ## kind-config.yml
 
-```yaml
+
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: employee-cluster
-
 nodes:
-- role: control-plane
-  image: kindest/node:v1.29.0
+   - role: control-plane
+     image: kindest/node:v1.29.0
 
-  extraPortMappings:
-  - containerPort: 30082
-    hostPort: 30082
-    protocol: TCP
+     extraPortMappings:
+           - containerPort: 30082
+             hostPort: 30082
+             protocol: TCP
 
-- role: worker
-  image: kindest/node:v1.29.0
 
-- role: worker
-  image: kindest/node:v1.29.0
-```
+   - role: worker
+     image: kindest/node:v1.29.0
+
+   - role: worker
+     image: kindest/node:v1.29.0
 
 Create cluster:
 
@@ -182,6 +189,40 @@ kubectl get ns
 
 # Step 8: Create Deployment
 
+
+kind: Deployment
+apiVersion: apps/v1
+
+metadata:
+   name: employee-app-deloyment
+   namespace: employee-app
+
+spec:
+   replicas: 4
+
+
+   selector:
+       matchLabels:
+           app: employee-app
+
+
+
+   template:
+      metadata:
+         labels:
+             app: employee-app
+
+
+      spec:
+        containers:
+          - name: employee-container
+            image: employee-portal:latest
+            imagePullPolicy: Never
+            ports:
+              - containerPort: 5000
+
+
+
 ```bash
 kubectl apply -f Deployment.yml
 ```
@@ -196,6 +237,29 @@ kubectl get pods -n employee-app
 ---
 
 # Step 9: Create Service
+
+
+kind: Service
+apiVersion: v1
+
+
+metadata:
+  name: employee-service
+  namespace: employee-app
+
+
+spec:
+  selector:
+     app: employee-app
+
+
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30082
+
+  type: NodePort
+
 
 ```bash
 kubectl apply -f service.yml
