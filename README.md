@@ -1,15 +1,22 @@
-# Employee Portal Application on Kubernetes (KIND)
+# 🚀 Employee Portal Application on Kubernetes (KIND)
 
-## Project Overview
+## 📌 Project Overview
 
-This project demonstrates deploying a Python Flask application on a Kubernetes cluster created using KIND (Kubernetes IN Docker).
+This project demonstrates deploying a **Python Flask application** on a **Kubernetes cluster created using KIND (Kubernetes IN Docker)**.
 
-The application is containerized using Docker, deployed using Kubernetes Deployment and exposed using a NodePort Service with KIND extraPortMappings.
+The application is:
+
+- Containerized using **Docker**
+- Deployed using **Kubernetes Deployment**
+- Exposed using a **NodePort Service**
+- Accessed externally using **KIND extraPortMappings**
+- Hosted on **AWS EC2**
 
 ---
 
-# Architecture
+# 🏗️ Architecture
 
+```text
 Browser
     ↓
 AWS EC2
@@ -27,10 +34,11 @@ ReplicaSet
 Pods
     ↓
 Flask Application
+```
 
 ---
 
-# Tech Stack
+# 🛠️ Tech Stack
 
 - Python 3.11
 - Flask
@@ -38,13 +46,14 @@ Flask Application
 - Kubernetes
 - KIND
 - AWS EC2
-- Git/GitHub
+- Git
+- GitHub
 
 ---
 
-# Project Structure
+# 📁 Project Structure
 
-```bash
+```text
 employee-portal/
 │
 ├── app.py
@@ -54,16 +63,19 @@ employee-portal/
 ├── namespace.yml
 ├── Deployment.yml
 ├── service.yml
+├── README.md
+│
 └── templates/
-    └── index.html
+      └── index.html
 ```
 
 ---
 
-# Step 1: Create Flask Application
+# 🚀 Step 1: Create Flask Application
 
 ## app.py
 
+```python
 from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
@@ -80,14 +92,17 @@ def home():
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "UP"})
+    return jsonify({
+        "status": "UP"
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+```
 
 ---
 
-# Step 2: Create requirements.txt
+# 📦 Step 2: Create requirements.txt
 
 ```text
 flask
@@ -95,7 +110,7 @@ flask
 
 ---
 
-# Step 3: Create Dockerfile
+# 🐳 Step 3: Create Dockerfile
 
 ```dockerfile
 FROM python:3.11-slim
@@ -113,7 +128,7 @@ CMD ["python","app.py"]
 
 ---
 
-# Step 4: Build Docker Image
+# 🔨 Step 4: Build Docker Image
 
 ```bash
 docker build -t employee-portal:latest .
@@ -127,29 +142,30 @@ docker images
 
 ---
 
-# Step 5: Create KIND Cluster
+# ☸️ Step 5: Create KIND Cluster
 
 ## kind-config.yml
 
-
+```yaml
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: employee-cluster
+
 nodes:
-   - role: control-plane
-     image: kindest/node:v1.29.0
+  - role: control-plane
+    image: kindest/node:v1.29.0
 
-     extraPortMappings:
-           - containerPort: 30082
-             hostPort: 30082
-             protocol: TCP
+    extraPortMappings:
+      - containerPort: 30082
+        hostPort: 30082
+        protocol: TCP
 
+  - role: worker
+    image: kindest/node:v1.29.0
 
-   - role: worker
-     image: kindest/node:v1.29.0
-
-   - role: worker
-     image: kindest/node:v1.29.0
+  - role: worker
+    image: kindest/node:v1.29.0
+```
 
 Create cluster:
 
@@ -165,7 +181,7 @@ kubectl get nodes
 
 ---
 
-# Step 6: Load Docker Image into KIND
+# 📥 Step 6: Load Docker Image into KIND
 
 ```bash
 kind load docker-image employee-portal:latest --name employee-cluster
@@ -173,7 +189,19 @@ kind load docker-image employee-portal:latest --name employee-cluster
 
 ---
 
-# Step 7: Create Namespace
+# 🏢 Step 7: Create Namespace
+
+## namespace.yml
+
+```yaml
+kind: Namespace
+apiVersion: v1
+
+metadata:
+  name: employee-app
+```
+
+Create namespace:
 
 ```bash
 kubectl apply -f namespace.yml
@@ -187,41 +215,41 @@ kubectl get ns
 
 ---
 
-# Step 8: Create Deployment
+# 🚀 Step 8: Create Deployment
 
+## Deployment.yml
 
+```yaml
 kind: Deployment
 apiVersion: apps/v1
 
 metadata:
-   name: employee-app-deloyment
-   namespace: employee-app
+  name: employee-app-deployment
+  namespace: employee-app
 
 spec:
-   replicas: 4
+  replicas: 4
 
+  selector:
+    matchLabels:
+      app: employee-app
 
-   selector:
-       matchLabels:
-           app: employee-app
+  template:
+    metadata:
+      labels:
+        app: employee-app
 
+    spec:
+      containers:
+        - name: employee-container
+          image: employee-portal:latest
+          imagePullPolicy: Never
 
+          ports:
+            - containerPort: 5000
+```
 
-   template:
-      metadata:
-         labels:
-             app: employee-app
-
-
-      spec:
-        containers:
-          - name: employee-container
-            image: employee-portal:latest
-            imagePullPolicy: Never
-            ports:
-              - containerPort: 5000
-
-
+Deploy:
 
 ```bash
 kubectl apply -f Deployment.yml
@@ -236,30 +264,31 @@ kubectl get pods -n employee-app
 
 ---
 
-# Step 9: Create Service
+# 🌐 Step 9: Create Service
 
+## service.yml
 
+```yaml
 kind: Service
 apiVersion: v1
-
 
 metadata:
   name: employee-service
   namespace: employee-app
 
-
 spec:
-  selector:
-     app: employee-app
+  type: NodePort
 
+  selector:
+    app: employee-app
 
   ports:
     - port: 80
       targetPort: 5000
       nodePort: 30082
+```
 
-  type: NodePort
-
+Create service:
 
 ```bash
 kubectl apply -f service.yml
@@ -273,34 +302,42 @@ kubectl get svc -n employee-app
 
 ---
 
-# Step 10: Open AWS Security Group
+# 🔐 Step 10: Configure AWS Security Group
 
-Allow:
+Allow inbound traffic:
 
 ```text
-TCP 30082
+Type      : Custom TCP
+Port      : 30082
+Source    : Anywhere (0.0.0.0/0)
 ```
 
 ---
 
-# Application Access
+# 🌍 Application Access
 
 ```text
 http://<EC2-PUBLIC-IP>:30082
 ```
 
+Example:
+
+```text
+http://15.207.xxx.xxx:30082
+```
+
 ---
 
-# Kubernetes Networking Flow
+# 🔄 Kubernetes Networking Flow
 
 ```text
 Browser
     ↓
-EC2:30082
+EC2 Public IP:30082
     ↓
 extraPortMappings
     ↓
-KIND Node:30082
+KIND Control Plane:30082
     ↓
 NodePort Service
     ↓
@@ -313,11 +350,33 @@ Flask Application
 
 ---
 
-# Understanding Ports
+# ❓ Why extraPortMappings?
+
+KIND runs Kubernetes nodes as Docker containers.
+
+To access a Kubernetes NodePort from outside the KIND cluster, we need to expose the NodePort from the Docker container to the EC2 host.
+
+```text
+EC2 Host Port 30082
+          ↓
+extraPortMappings
+          ↓
+KIND Node Port 30082
+          ↓
+NodePort Service
+          ↓
+Flask Application
+```
+
+Without `extraPortMappings`, the application would only be accessible inside the KIND cluster.
+
+---
+
+# 🔢 Understanding Ports
 
 | Component | Port |
 |-----------|------|
-| Flask App | 5000 |
+| Flask Application | 5000 |
 | containerPort | 5000 |
 | targetPort | 5000 |
 | Service Port | 80 |
@@ -326,7 +385,7 @@ Flask Application
 
 ---
 
-# Commands Used
+# 💻 Commands Used
 
 ```bash
 docker build -t employee-portal:latest .
@@ -343,26 +402,59 @@ kubectl apply -f service.yml
 
 kubectl get nodes
 
-kubectl get pods -n employee-app
-
 kubectl get deploy -n employee-app
+
+kubectl get pods -n employee-app
 
 kubectl get svc -n employee-app
 ```
 
 ---
 
-# Learning Outcomes
+# 📚 Key Learnings
 
-- Docker Image Creation
-- KIND Cluster Creation
-- extraPortMappings
-- Namespace
-- Deployment
-- ReplicaSet
-- Pods
-- Labels and Selectors
-- NodePort Service
-- Kubernetes Networking
-- AWS Security Groups
-- Browser Access
+✅ Docker Image Creation
+
+✅ KIND Cluster Creation
+
+✅ extraPortMappings
+
+✅ Kubernetes Namespace
+
+✅ Deployment
+
+✅ ReplicaSet
+
+✅ Pods
+
+✅ Labels and Selectors
+
+✅ NodePort Service
+
+✅ Kubernetes Networking
+
+✅ AWS Security Groups
+
+✅ Browser Access
+
+✅ Container Image Loading in KIND
+
+---
+
+# 📸 Screenshots
+
+Add screenshots here:
+
+- Application Homepage
+- kubectl get nodes
+- kubectl get pods
+- kubectl get svc
+- Browser Output
+
+---
+
+# 👨‍💻 Author
+
+**Manmeet Kaur**
+
+DevOps Engineer | RHCSA Certified | AWS | Docker | Kubernetes | CI/CD
